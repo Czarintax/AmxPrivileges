@@ -1,0 +1,14 @@
+{
+    "name": "AmxPrivileges",
+    "version": "1.0.1",
+    "description": "Page for viewing active AMX Mod X privileges across game servers",
+    "authors": [
+        "Flames"
+    ],
+    "providers": [
+        "Flute\\Modules\\AmxPrivileges\\Providers\\AmxPrivilegesProvider"
+    ],
+    "dependencies": {
+        "flute": ">=1.0.0"
+    }
+}
