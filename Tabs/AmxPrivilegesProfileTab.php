@@ -50,12 +50,12 @@ class AmxPrivilegesProfileTab extends ProfileTab
     public function getContent(User $user)
     {
         $service = app(AmxPrivilegesService::class);
-        $steamId = $this->getUserSteamId($user);
+        $xashId = $this->getUserXashId($user);
 
         $privileges = [];
 
-        if ($steamId) {
-            $privileges = $service->getPrivilegesForSteamId($steamId);
+        if ($xashId) {
+            $privileges = $service->getPrivilegesForSteamId($xashId);
         }
 
         $active = [];
@@ -70,7 +70,7 @@ class AmxPrivilegesProfileTab extends ProfileTab
         }
 
         $isOwner = user()->id === $user->id;
-        $showPasswordModal = $isOwner && !empty(array_filter($active, static fn($p) => $p['usesPassword'] || $p['hasPassword']));
+        $showPasswordModal = $isOwner && !empty(array_filter($active, static fn($p) => $p['usesPassword']));
         $canSeeFlags = !config('amxprivileges.hide_flags_from_public', false)
             || user()->can('admin.boss');
 
@@ -85,17 +85,22 @@ class AmxPrivilegesProfileTab extends ProfileTab
         ]);
     }
 
-    protected function getUserSteamId(User $user): ?string
+    protected function getUserXashId(User $user): ?string
     {
-        $steam = $user->getSocialNetwork('Steam') ?? $user->getSocialNetwork('HttpsSteam');
-        if (!$steam?->value) {
-            return null;
+        try {
+            $gameDb = db('AmxModX');
+            $binding = $gameDb->query("SELECT xash_id FROM game_xash_bindings WHERE user_id = ? LIMIT 1", [$user->id])->fetchAll();
+
+            if (!empty($binding)) {
+                return $binding[0]['xash_id'] ?? null;
+            }
+        } catch (\Throwable $e) {
+            logs('modules')->warning('AmxPrivileges: failed to get Xash ID for user', [
+                'user_id' => $user->id,
+                'error' => $e->getMessage(),
+            ]);
         }
 
-        try {
-            return steam()->steamid($steam->value)->RenderSteam2();
-        } catch (\Throwable $e) {
-            return null;
-        }
+        return null;
     }
 }

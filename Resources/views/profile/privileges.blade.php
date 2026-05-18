@@ -33,7 +33,7 @@
                         @if (!$entry['isForever'])
                             <span class="amxpriv-profile__time {{ $isLow ? 'amxpriv-profile__time--low' : '' }}"
                                 data-tooltip="{{ date('d.m.Y H:i', $entry['expired']) }}">
-                                {{ __('amxprivileges.profile.expires_in', ['days' => $entry['daysLeft']]) }}
+                                {{ __('amxprivileges.profile.expires_in', ['count' => $entry['daysLeft']]) }}
                             </span>
                         @else
                             <span class="amxpriv-profile__time amxpriv-profile__time--forever"
@@ -68,12 +68,21 @@
 
                     @if ($isOwner && ($entry['usesPassword'] || $entry['hasPassword']))
                         <div class="amxpriv-profile__foot">
-                            <button type="button" class="amxpriv-profile__act"
-                                data-modal-open="amxpriv-password-modal">
-                                <x-icon path="ph.regular.key" />
-                                {{ __('amxprivileges.profile.change_password') }}
-                                <x-icon path="ph.regular.caret-right" class="amxpriv-profile__act-arrow" />
-                            </button>
+                            @if ($entry['usesPassword'])
+                                <button type="button" class="amxpriv-profile__act"
+                                    data-modal-open="amxpriv-password-modal">
+                                    <x-icon path="ph.regular.key" />
+                                    {{ __('amxprivileges.profile.change_password') }}
+                                    <x-icon path="ph.regular.caret-right" class="amxpriv-profile__act-arrow" />
+                                </button>
+                            @else
+                                <span class="amxpriv-profile__act amxpriv-profile__act--disabled"
+                                    style="cursor: help; opacity: 0.5;"
+                                    data-tooltip="{{ __('amxprivileges.profile.password_not_checked') }}">
+                                    <x-icon path="ph.regular.key" />
+                                    {{ __('amxprivileges.profile.change_password') }}
+                                </span>
+                            @endif
                         </div>
                     @endif
                 </div>

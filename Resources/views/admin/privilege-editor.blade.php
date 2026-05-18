@@ -1,8 +1,9 @@
 @php
     $flagsList = [];
-    foreach (range('a', 'u') as $letter) {
+    foreach (range('a', 'v') as $letter) {
         $flagsList[$letter] = __('amxprivileges.flag_descriptions.' . $letter);
     }
+    $flagsList['y'] = __('amxprivileges.flag_descriptions.y');
     $flagsList['z'] = __('amxprivileges.flag_descriptions.z');
 
     $initialRules = [];

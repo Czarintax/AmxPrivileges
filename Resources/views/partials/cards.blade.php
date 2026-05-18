@@ -25,8 +25,8 @@
 
             <div class="amxpriv-card__body">
                 <div class="amxpriv-card__head">
-                    @if (!empty($admin['steamid']) && !$admin['isSensitiveId'])
-                        <a href="{{ url('profile/search/' . $admin['steamid']) }}"
+                    @if (!empty($admin['fluteProfileUrl']))
+                        <a href="{{ $admin['fluteProfileUrl'] }}"
                             class="amxpriv-card__user"
                             data-user-card
                             hx-boost="true" hx-target="#main"
@@ -34,20 +34,20 @@
                             yoyo:ignore
                             onclick="event.stopPropagation()">
                             <div class="amxpriv-card__avatar">
-                                <img src="{{ $avatarUrl }}" alt="{{ $admin['nickname'] ?: $admin['steamid'] }}" loading="lazy">
+                                <img src="{{ $avatarUrl }}" alt="{{ $admin['nickname'] }}" loading="lazy">
                             </div>
                             <div class="amxpriv-card__info">
-                                <h4 class="amxpriv-card__name">{{ $admin['nickname'] ?: $admin['steamid'] }}</h4>
+                                <h4 class="amxpriv-card__name">{{ $admin['nickname'] }}</h4>
                                 <span class="amxpriv-card__privilege">{{ $admin['privilegeName'] }}</span>
                             </div>
                         </a>
                     @else
                         <div class="amxpriv-card__user">
                             <div class="amxpriv-card__avatar">
-                                <img src="{{ $avatarUrl }}" alt="{{ $admin['nickname'] ?: $admin['steamid'] }}" loading="lazy">
+                                <img src="{{ $avatarUrl }}" alt="{{ $admin['nickname'] }}" loading="lazy">
                             </div>
                             <div class="amxpriv-card__info">
-                                <h4 class="amxpriv-card__name">{{ $admin['nickname'] ?: $admin['steamid'] }}</h4>
+                                <h4 class="amxpriv-card__name">{{ $admin['nickname'] }}</h4>
                                 <span class="amxpriv-card__privilege">{{ $admin['privilegeName'] }}</span>
                             </div>
                         </div>
@@ -62,18 +62,11 @@
                             <span class="amxpriv-card__badge {{ $isLow ? 'amxpriv-card__badge--low' : '' }}"
                                 data-tooltip="{{ date('d.m.Y H:i', $admin['expired']) }}">
                                 <x-icon path="ph.regular.clock" />
-                                <span>{{ __('amxprivileges.days_left', ['days' => $admin['daysLeft']]) }}</span>
+                                <span>{{ __('amxprivileges.days_left', ['count' => $admin['daysLeft']]) }}</span>
                             </span>
                         @endif
                     </div>
                 </div>
-
-                @if (!empty($admin['steamid']) && !$admin['isSensitiveId'])
-                    <div class="amxpriv-card__steamid">
-                        <x-icon path="ph.regular.identification-badge" />
-                        <span>{{ $admin['steamid'] }}</span>
-                    </div>
-                @endif
 
                 @if (!empty($flags) && $canSeeFlags)
                     <div class="amxpriv-card__flags">

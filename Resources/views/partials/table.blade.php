@@ -36,8 +36,8 @@
                         hx-swap="innerHTML"
                         data-disable-loading-states>
                         <td>
-                            @if (!empty($admin['steamid']) && !$admin['isSensitiveId'])
-                                <a href="{{ url('profile/search/' . $admin['steamid']) }}"
+                            @if (!empty($admin['fluteProfileUrl']))
+                                <a href="{{ $admin['fluteProfileUrl'] }}"
                                     class="amxpriv-table-view__player"
                                     data-user-card
                                     hx-boost="true" hx-target="#main"
@@ -46,11 +46,10 @@
                                     onclick="event.stopPropagation()">
                                     <img class="amxpriv-table-view__avatar-img"
                                         src="{{ $avatarUrl }}"
-                                        alt="{{ $admin['nickname'] ?: $admin['steamid'] }}"
+                                        alt="{{ $admin['nickname'] }}"
                                         loading="lazy">
                                     <span class="amxpriv-table-view__player-info">
-                                        <span class="amxpriv-table-view__player-name">{{ $admin['nickname'] ?: $admin['steamid'] }}</span>
-                                        <small class="amxpriv-table-view__player-steam">{{ $admin['steamid'] }}</small>
+                                        <span class="amxpriv-table-view__player-name">{{ $admin['nickname'] }}</span>
                                     </span>
                                 </a>
                             @else
@@ -96,7 +95,7 @@
                             @else
                                 <span class="amxpriv-table-view__badge {{ $isLow ? 'amxpriv-table-view__badge--low' : '' }}"
                                     data-tooltip="{{ date('d.m.Y H:i', $admin['expired']) }}">
-                                    {{ __('amxprivileges.days_left', ['days' => $admin['daysLeft']]) }}
+                                    {{ __('amxprivileges.days_left', ['count' => $admin['daysLeft']]) }}
                                 </span>
                             @endif
                         </td>

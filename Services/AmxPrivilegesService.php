@@ -110,6 +110,13 @@ class AmxPrivilegesService
                 if (!empty($enriched)) {
                     $this->resolveAvatars($enriched);
 
+                    // Sort by number of access flags (highest first), then by created date (oldest first)
+                    usort($enriched, static function ($a, $b) {
+                        $diff = strlen($b['access']) - strlen($a['access']);
+                        if ($diff !== 0) return $diff;
+                        return ($a['created'] ?: 0) - ($b['created'] ?: 0);
+                    });
+
                     $result[] = [
                         'admins' => $enriched,
                         'server' => $server,
@@ -217,10 +224,13 @@ class AmxPrivilegesService
         }
 
         $nickname = trim((string) ($admin['nickname'] ?? ($admin['username'] ?? '')));
+        $nickname = preg_replace('/\^[0-9]/', '', $nickname);
         $steamid = trim((string) ($admin['steamid'] ?? ''));
         $access = preg_replace('/[^a-z]/i', '', (string) ($admin['access'] ?? ''));
         $flags = preg_replace('/[^a-z]/i', '', (string) ($admin['flags'] ?? ''));
-        $isSensitiveId = (bool) filter_var($steamid, FILTER_VALIDATE_IP);
+
+        // Always hide Xash IDs from public view
+        $isSensitiveId = true;
 
         return [
             'id' => (int) $admin['id'],
@@ -235,10 +245,12 @@ class AmxPrivilegesService
             'daysLeft' => $daysLeft,
             'progress' => $progress,
             'hasPassword' => !empty($admin['password']),
-            'usesPassword' => str_contains($flags, 'a') || str_contains($flags, 'e'),
+            'usesPassword' => str_contains($flags, 'a'),
             'ashow' => (int) ($admin['ashow'] ?? 1),
             'privilegeName' => $this->resolvePrivilegeName($access),
             'avatar' => null,
+            'fluteUserId' => null,
+            'fluteProfileUrl' => null,
         ];
     }
 
@@ -343,33 +355,69 @@ class AmxPrivilegesService
      */
     protected function resolveAvatars(array &$admins): void
     {
-        $steamIds = [];
+        // Collect all Xash IDs from admins
+        $xashIds = [];
         foreach ($admins as $admin) {
             $sid = $admin['steamid'];
-            if (!empty($sid) && preg_match('/^STEAM_/', $sid)) {
-                $steamIds[] = $sid;
+            if (!empty($sid)) {
+                $xashIds[] = $sid;
             }
         }
 
-        if (empty($steamIds)) {
+        if (empty($xashIds)) {
             return;
         }
 
+        // Look up Xash IDs in game_xash_bindings to find linked Flute users
         try {
-            $steamInfoMap = steam()->getUsersInfo($steamIds);
-        } catch (\Throwable $e) {
-            return;
-        }
+            $gameDb = db('AmxModX');
 
-        foreach ($admins as &$admin) {
-            $sid = $admin['steamid'];
-            if (isset($steamInfoMap[$sid])) {
-                $info = $steamInfoMap[$sid];
-                $admin['avatar'] = $info['avatar'] ?? null;
-                if (empty($admin['nickname']) && !empty($info['name'])) {
-                    $admin['nickname'] = $info['name'];
+            $placeholders = implode(',', array_fill(0, count($xashIds), '?'));
+            $bindings = $gameDb->query("SELECT user_id, xash_id FROM game_xash_bindings WHERE xash_id IN ({$placeholders})", $xashIds)->fetchAll();
+
+            // Map xash_id -> user_id
+            $xashToUserId = [];
+            foreach ($bindings as $binding) {
+                $xashToUserId[$binding['xash_id']] = (int) $binding['user_id'];
+            }
+
+            if (empty($xashToUserId)) {
+                return;
+            }
+
+            // Load Flute users by their IDs
+            $userIds = array_unique(array_values($xashToUserId));
+            $users = \Flute\Core\Database\Entities\User::query()
+                ->where('id', 'IN', $userIds)
+                ->fetchAll();
+
+            // Map user_id -> user entity
+            $userMap = [];
+            foreach ($users as $user) {
+                $userMap[$user->id] = $user;
+            }
+
+            // Assign avatars and profile links to admins
+            foreach ($admins as &$admin) {
+                $sid = $admin['steamid'];
+                if (isset($xashToUserId[$sid])) {
+                    $userId = $xashToUserId[$sid];
+                    if (isset($userMap[$userId])) {
+                        $user = $userMap[$userId];
+                        $avatar = $user->avatar ?? null;
+                        $admin['avatar'] = $avatar ? asset($avatar) : null;
+                        $admin['fluteUserId'] = $user->id;
+                        $admin['fluteProfileUrl'] = url('profile/' . ($user->uri ?? $user->id));
+                        if (empty($admin['nickname']) && !empty($user->name)) {
+                            $admin['nickname'] = $user->name;
+                        }
+                    }
                 }
             }
+        } catch (\Throwable $e) {
+            logs('modules')->warning('AmxPrivileges: failed to resolve avatars via game_xash_bindings', [
+                'error' => $e->getMessage(),
+            ]);
         }
     }
 
@@ -484,13 +532,19 @@ class AmxPrivilegesService
     }
 
     /**
-     * Generate STEAM_0 and STEAM_1 variants for a SteamID.
-     * AMX databases may store either format.
+     * Generate ID variants for lookup.
+     * For Xash IDs (ID_xxx format), return as-is.
+     * For Steam IDs, generate STEAM_0 and STEAM_1 variants.
      *
      * @return string[]
      */
     protected function getSteamIdVariants(string $steamId): array
     {
+        // Xash ID format - no variants needed
+        if (str_starts_with($steamId, 'ID_')) {
+            return [$steamId];
+        }
+
         if (preg_match('/^STEAM_(\d):(\d):(\d+)$/', $steamId, $m)) {
             return [
                 'STEAM_0:' . $m[2] . ':' . $m[3],

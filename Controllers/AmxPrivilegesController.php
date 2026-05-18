@@ -124,18 +124,24 @@ class AmxPrivilegesController extends BaseController
             return $this->error(__('amxprivileges.profile.password_invalid_chars'), 422);
         }
 
-        $steam = $user->getSocialNetwork('Steam') ?? $user->getSocialNetwork('HttpsSteam');
-        if (!$steam?->value) {
-            return $this->error(__('amxprivileges.profile.cannot_identify'), 400);
-        }
-
+        // Look up Xash ID from game_xash_bindings
+        $steamId = null;
         try {
-            $steamId = steam()->steamid($steam->value)->RenderSteam2();
+            $gameDb = db('AmxModX');
+            $binding = $gameDb->query("SELECT xash_id FROM game_xash_bindings WHERE user_id = ? LIMIT 1", [$user->id])->fetchAll();
+
+            if (!empty($binding)) {
+                $steamId = $binding[0]['xash_id'] ?? null;
+            }
         } catch (\Throwable $e) {
             return $this->error(__('amxprivileges.profile.cannot_identify'), 400);
         }
 
-        $updated = $service->changePassword($steamId, $newPassword);
+        if (!$steamId) {
+            return $this->error(__('amxprivileges.profile.cannot_identify'), 400);
+        }
+
+        $updated = $service->changePassword($steamId, md5($newPassword));
 
         if (!$updated) {
             return $this->error(__('amxprivileges.profile.admin_not_found'), 404);

@@ -4,7 +4,7 @@
     $server = $admin['server'];
     $defaultAvatar = asset(config('profile.default_avatar'));
     $avatarUrl = $admin['avatar'] ?? $defaultAvatar;
-    $profileLink = (!empty($admin['steamid']) && !$admin['isSensitiveId']) ? url('profile/search/' . $admin['steamid']) : null;
+    $profileLink = $admin['fluteProfileUrl'] ?? null;
 @endphp
 
 <div class="amxpriv-detail">
@@ -26,7 +26,7 @@
             <div class="amxpriv-detail__progress-bar" style="--progress: {{ $admin['progress'] }}%"></div>
             <div class="amxpriv-detail__progress-labels">
                 <span>{{ __('amxprivileges.time_remaining') }}</span>
-                <span>{{ __('amxprivileges.days_left', ['days' => $admin['daysLeft']]) }}</span>
+                <span>{{ __('amxprivileges.days_left', ['count' => $admin['daysLeft']]) }}</span>
             </div>
         </div>
     @endif
@@ -39,16 +39,6 @@
             </span>
             <span class="amxpriv-detail__value">{{ transValue($server->name) }}</span>
         </div>
-
-        @if (!$admin['isSensitiveId'])
-            <div class="amxpriv-detail__row">
-                <span class="amxpriv-detail__label">
-                    <x-icon path="ph.regular.identification-card" />
-                    {{ __('amxprivileges.identifier') }}
-                </span>
-                <span class="amxpriv-detail__value amxpriv-detail__value--mono">{{ $admin['steamid'] }}</span>
-            </div>
-        @endif
 
         <div class="amxpriv-detail__row">
             <span class="amxpriv-detail__label">
